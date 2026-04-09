@@ -1,0 +1,13 @@
+{
+  "history_start": "2025-01-01 00:00:00",
+  "history_end": "2026-01-10 06:00:00",
+  "average_load_kw": 1066.837,
+  "p90_load_threshold_kw": 1471.796,
+  "max_load_kw": 2111.214,
+  "forecast_start": "2026-01-01 00:00:00",
+  "forecast_end": "2026-01-10 06:00:00",
+  "forecast_avg_kw": 885.236,
+  "forecast_max_kw": 1011.296,
+  "forecast_p90_avg_kw": 934.812,
+  "forecast_risk_buffer_avg_kw": 49.576
+}
