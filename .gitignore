@@ -1,0 +1,21 @@
+# Large data files
+participant_package/reefer_release/
+participant_package/wetterdaten/
+*.zip
+
+# CatBoost training cache
+catboost_info/
+
+# macOS artifacts
+__MACOSX/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# IDE
+.cursor/
+
+# OS artifacts
+.DS_Store
