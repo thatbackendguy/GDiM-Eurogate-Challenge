@@ -1,46 +1,34 @@
 {
   "folds": [
     {
-      "fold_name": "fold_1",
-      "train_rows": 7395,
-      "valid_rows": 168,
-      "mae_all": 199.16957336939117,
-      "mae_peak": 96.31140405776891,
-      "pinball_p90": 38.58854448599651,
-      "score": 136.19591679922559
-    },
-    {
-      "fold_name": "fold_2",
-      "train_rows": 7563,
-      "valid_rows": 168,
-      "mae_all": 112.880879234247,
-      "mae_peak": 220.11393564217198,
-      "pinball_p90": 18.274458437483034,
-      "score": 126.12951199727169
-    },
-    {
-      "fold_name": "fold_3",
-      "train_rows": 7731,
-      "valid_rows": 168,
-      "mae_all": 94.53784258725774,
-      "mae_peak": 135.13537162633958,
-      "pinball_p90": 14.867363987787003,
-      "score": 90.78300557908815
-    },
-    {
-      "fold_name": "fold_4",
+      "fold_name": "holdout_public_target_window",
       "train_rows": 7844,
-      "valid_rows": 168,
-      "mae_all": 45.21140102448615,
-      "mae_peak": 34.340435139155694,
-      "pinball_p90": 7.7824674355434995,
-      "score": 34.464324541098485
+      "valid_rows": 223,
+      "mae_all": 53.92755545133681,
+      "mae_peak": 31.595532784895557,
+      "pinball_p90": 8.75470276534228,
+      "score": 38.19337811420552
     }
   ],
   "mean_metrics": {
-    "mae_all": 112.9499240538455,
-    "mae_peak": 121.47528661635904,
-    "pinball_p90": 19.87820858670251,
-    "score": 96.89318972917097
+    "mae_all": 53.92755545133681,
+    "mae_peak": 31.595532784895557,
+    "pinball_p90": 8.75470276534228,
+    "score": 38.19337811420552
+  },
+  "evaluation": {
+    "fold_name": "holdout_public_target_window",
+    "train_rows": 7844,
+    "valid_rows": 223,
+    "mae_all": 53.92755545133681,
+    "mae_peak": 31.595532784895557,
+    "pinball_p90": 8.75470276534228,
+    "score": 38.19337811420552
+  },
+  "metrics": {
+    "mae_all": 53.92755545133681,
+    "mae_peak": 31.595532784895557,
+    "pinball_p90": 8.75470276534228,
+    "score": 38.19337811420552
   }
 }

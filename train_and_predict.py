@@ -86,12 +86,12 @@ def main() -> None:
         feature_path.parent.mkdir(parents=True, exist_ok=True)
         feature_table.reset_index().to_csv(feature_path, index=False)
 
-    print("Running rolling backtests and calibrating the p90 forecast...")
+    print("Running single holdout evaluation and calibrating the p90 forecast...")
     fold_results, best_bundle, best_calibrator, best_result = run_backtest(feature_table)
     write_metrics_json(metrics_path, fold_results)
     save_model_artifact(best_model_path, best_bundle, best_calibrator, best_result)
 
-    print(f"Using best fold model: {best_result.fold_name}")
+    print(f"Using evaluation model: {best_result.fold_name}")
     model_ready = build_model_ready_feature_table(feature_table, best_bundle.preprocessor)
     processed_feature_path.parent.mkdir(parents=True, exist_ok=True)
     model_ready.reset_index().to_csv(processed_feature_path, index=False)
@@ -108,7 +108,7 @@ def main() -> None:
     print(f"Wrote preprocessing summary to {preprocessing_summary_path}")
     print(f"Wrote best model to {best_model_path}")
     print(
-        f"Best model result ({best_result.fold_name}): "
+        f"Evaluation result ({best_result.fold_name}): "
         f"mae_all={best_result.mae_all:.3f}, "
         f"mae_peak={best_result.mae_peak:.3f}, "
         f"pinball_p90={best_result.pinball_p90:.3f}, "

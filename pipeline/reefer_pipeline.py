@@ -494,23 +494,16 @@ def get_training_rows(feature_table: pd.DataFrame) -> pd.DataFrame:
     return rows.loc[(rows.index >= TRAIN_START) & (rows.index <= TRAIN_END)].copy()
 
 
-def make_validation_folds(
-    feature_table: pd.DataFrame,
-    *,
-    n_folds: int = 4,
-    fold_hours: int = 24 * 7,
-) -> list[tuple[str, pd.Timestamp, pd.Timestamp]]:
+def get_evaluation_window(feature_table: pd.DataFrame) -> tuple[str, pd.Timestamp, pd.Timestamp]:
     usable = get_model_rows(feature_table)
-    if len(usable) < n_folds * fold_hours:
-        raise ValueError("Not enough trainable rows for the requested backtest folds.")
-
-    valid_end = usable.index.max()
-    folds: list[tuple[str, pd.Timestamp, pd.Timestamp]] = []
-    for offset in range(n_folds):
-        fold_end = valid_end - pd.Timedelta(hours=fold_hours * offset)
-        fold_start = fold_end - pd.Timedelta(hours=fold_hours - 1)
-        folds.append((f"fold_{n_folds - offset}", fold_start, fold_end))
-    return list(reversed(folds))
+    public_targets = usable.loc[usable["is_public_target"]].copy()
+    if public_targets.empty:
+        raise ValueError("No public target rows were available for holdout evaluation.")
+    return (
+        "holdout_public_target_window",
+        public_targets.index.min(),
+        public_targets.index.max(),
+    )
 
 
 def select_training_columns(
@@ -691,71 +684,60 @@ def run_backtest(
 ) -> tuple[list[FoldResult], ResidualModelBundle, ResidualCalibrator, FoldResult]:
     rows = get_model_rows(feature_table)
     feature_columns = get_feature_columns(feature_table)
-    folds = make_validation_folds(feature_table)
+    eval_name, eval_start, eval_end = get_evaluation_window(feature_table)
 
-    fold_results: list[FoldResult] = []
-    best_bundle: ResidualModelBundle | None = None
-    best_calibrator: ResidualCalibrator | None = None
-    best_result: FoldResult | None = None
+    train_frame = rows.loc[
+        (rows.index >= TRAIN_START)
+        & (rows.index <= TRAIN_END)
+    ].copy()
+    valid_frame = rows.loc[
+        (rows.index >= eval_start)
+        & (rows.index <= eval_end)
+        & (rows["is_public_target"])
+    ].copy()
 
-    for fold_name, fold_start, fold_end in folds:
-        train_frame = rows.loc[
-            (rows.index < fold_start)
-            & (rows.index >= TRAIN_START)
-            & (rows.index <= TRAIN_END)
-        ].copy()
-        valid_frame = rows.loc[(rows.index >= fold_start) & (rows.index <= fold_end)].copy()
+    print(
+        f"  {eval_name}: train_rows={len(train_frame):,}, valid_rows={len(valid_frame):,}, "
+        f"window={eval_start} to {eval_end}"
+    )
+    bundle = fit_residual_model(train_frame, feature_columns)
+    valid_pred = predict_point_forecast(valid_frame, bundle)
 
-        print(
-            f"  {fold_name}: train_rows={len(train_frame):,}, valid_rows={len(valid_frame):,}"
-        )
-        bundle = fit_residual_model(train_frame, feature_columns)
-        valid_pred = predict_point_forecast(valid_frame, bundle)
-
-        fold_calibration_frame = pd.DataFrame(
-            {
-                "timestamp_utc": valid_frame.index,
-                "actual_kw": valid_frame["y_kw"].to_numpy(dtype=float),
-                "pred_power_kw": valid_pred,
-            }
-        )
-        fold_calibrator = ResidualCalibrator.fit(
-            fold_calibration_frame["timestamp_utc"],
-            fold_calibration_frame["pred_power_kw"],
-            fold_calibration_frame["actual_kw"],
-        )
-        adjustments = fold_calibrator.predict_adjustment(
-            fold_calibration_frame["timestamp_utc"],
-            fold_calibration_frame["pred_power_kw"],
-        )
-        pred_p90 = np.maximum(
-            fold_calibration_frame["pred_power_kw"].to_numpy(dtype=float),
-            fold_calibration_frame["pred_power_kw"].to_numpy(dtype=float) + adjustments,
-        )
-        metrics = evaluate_predictions(
-            fold_calibration_frame["actual_kw"].to_numpy(dtype=float),
-            fold_calibration_frame["pred_power_kw"].to_numpy(dtype=float),
-            pred_p90,
-        )
-        fold_result = FoldResult(
-            fold_name=fold_name,
-            train_rows=int(len(train_frame)),
-            valid_rows=int(len(valid_frame)),
-            mae_all=metrics["mae_all"],
-            mae_peak=metrics["mae_peak"],
-            pinball_p90=metrics["pinball_p90"],
-            score=metrics["score"],
-        )
-        fold_results.append(fold_result)
-        if best_result is None or fold_result.score < best_result.score:
-            best_result = fold_result
-            best_bundle = bundle
-            best_calibrator = fold_calibrator
-
-    if best_bundle is None or best_calibrator is None or best_result is None:
-        raise ValueError("Backtest did not produce a best model.")
-
-    return fold_results, best_bundle, best_calibrator, best_result
+    calibration_frame = pd.DataFrame(
+        {
+            "timestamp_utc": valid_frame.index,
+            "actual_kw": valid_frame["y_kw"].to_numpy(dtype=float),
+            "pred_power_kw": valid_pred,
+        }
+    )
+    calibrator = ResidualCalibrator.fit(
+        calibration_frame["timestamp_utc"],
+        calibration_frame["pred_power_kw"],
+        calibration_frame["actual_kw"],
+    )
+    adjustments = calibrator.predict_adjustment(
+        calibration_frame["timestamp_utc"],
+        calibration_frame["pred_power_kw"],
+    )
+    pred_p90 = np.maximum(
+        calibration_frame["pred_power_kw"].to_numpy(dtype=float),
+        calibration_frame["pred_power_kw"].to_numpy(dtype=float) + adjustments,
+    )
+    metrics = evaluate_predictions(
+        calibration_frame["actual_kw"].to_numpy(dtype=float),
+        calibration_frame["pred_power_kw"].to_numpy(dtype=float),
+        pred_p90,
+    )
+    result = FoldResult(
+        fold_name=eval_name,
+        train_rows=int(len(train_frame)),
+        valid_rows=int(len(valid_frame)),
+        mae_all=metrics["mae_all"],
+        mae_peak=metrics["mae_peak"],
+        pinball_p90=metrics["pinball_p90"],
+        score=metrics["score"],
+    )
+    return [result], bundle, calibrator, result
 
 
 def save_model_artifact(
@@ -844,10 +826,15 @@ def summarize_fold_results(results: list[FoldResult]) -> dict[str, float]:
 
 
 def write_metrics_json(path: Path, fold_results: list[FoldResult]) -> None:
+    serialized = serialize_fold_results(fold_results)
+    summary = summarize_fold_results(fold_results)
     aggregate = {
-        "folds": serialize_fold_results(fold_results),
-        "mean_metrics": summarize_fold_results(fold_results),
+        "folds": serialized,
+        "mean_metrics": summary,
     }
+    if len(serialized) == 1:
+        aggregate["evaluation"] = serialized[0]
+        aggregate["metrics"] = summary
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(aggregate, indent=2), encoding="utf-8")
 

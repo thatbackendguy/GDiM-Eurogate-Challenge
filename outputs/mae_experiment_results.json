@@ -1,0 +1,235 @@
+[
+  {
+    "experiment": "current_gbr_peak2.0",
+    "mean_mae_all": 112.9499240538455,
+    "mean_score": 96.89318972917097,
+    "best_fold": "fold_4",
+    "best_fold_mae_all": 45.21140102448615,
+    "best_fold_score": 34.464324541098485,
+    "fold_metrics": [
+      {
+        "fold_name": "fold_1",
+        "mae_all": 199.16957336939117,
+        "mae_peak": 96.31140405776891,
+        "pinball_p90": 38.58854448599651,
+        "score": 136.19591679922559
+      },
+      {
+        "fold_name": "fold_2",
+        "mae_all": 112.880879234247,
+        "mae_peak": 220.11393564217198,
+        "pinball_p90": 18.274458437483034,
+        "score": 126.12951199727169
+      },
+      {
+        "fold_name": "fold_3",
+        "mae_all": 94.53784258725774,
+        "mae_peak": 135.13537162633958,
+        "pinball_p90": 14.867363987787003,
+        "score": 90.78300557908815
+      },
+      {
+        "fold_name": "fold_4",
+        "mae_all": 45.21140102448615,
+        "mae_peak": 34.340435139155694,
+        "pinball_p90": 7.7824674355434995,
+        "score": 34.464324541098485
+      }
+    ]
+  },
+  {
+    "experiment": "gbr_peak1.5",
+    "mean_mae_all": 113.94762328540672,
+    "mean_score": 99.33393689443983,
+    "best_fold": "fold_4",
+    "best_fold_mae_all": 43.93729308920907,
+    "best_fold_score": 39.17624666495699,
+    "fold_metrics": [
+      {
+        "fold_name": "fold_1",
+        "mae_all": 194.32477714310167,
+        "mae_peak": 97.0918144829214,
+        "pinball_p90": 38.91243511297078,
+        "score": 134.07241993902142
+      },
+      {
+        "fold_name": "fold_2",
+        "mae_all": 117.31182709747542,
+        "mae_peak": 220.55610840076122,
+        "pinball_p90": 18.179751460598702,
+        "score": 128.4586963610858
+      },
+      {
+        "fold_name": "fold_3",
+        "mae_all": 100.21659581184073,
+        "mae_peak": 141.22318143449107,
+        "pinball_p90": 15.765661382137253,
+        "score": 95.62838461269514
+      },
+      {
+        "fold_name": "fold_4",
+        "mae_all": 43.93729308920907,
+        "mae_peak": 52.26858786559937,
+        "pinball_p90": 7.635118803363257,
+        "score": 39.17624666495699
+      }
+    ]
+  },
+  {
+    "experiment": "gbr_peak1.2",
+    "mean_mae_all": 114.38983962459407,
+    "mean_score": 100.54393138580741,
+    "best_fold": "fold_4",
+    "best_fold_mae_all": 43.451772508395486,
+    "best_fold_score": 40.25698013449243,
+    "fold_metrics": [
+      {
+        "fold_name": "fold_1",
+        "mae_all": 197.2077562999121,
+        "mae_peak": 101.00154456327822,
+        "pinball_p90": 41.81680056002156,
+        "score": 137.2677016309438
+      },
+      {
+        "fold_name": "fold_2",
+        "mae_all": 117.41002756207251,
+        "mae_peak": 224.73029730309847,
+        "pinball_p90": 18.23529085488755,
+        "score": 129.7711611429433
+      },
+      {
+        "fold_name": "fold_3",
+        "mae_all": 99.48980212799621,
+        "mae_peak": 139.8799440579388,
+        "pinball_p90": 15.854991767351732,
+        "score": 94.87988263485009
+      },
+      {
+        "fold_name": "fold_4",
+        "mae_all": 43.451772508395486,
+        "mae_peak": 56.563984394859816,
+        "pinball_p90": 7.80949280918371,
+        "score": 40.25698013449243
+      }
+    ]
+  },
+  {
+    "experiment": "gbr_no_peak_weight",
+    "mean_mae_all": 113.71526084477921,
+    "mean_score": 99.14622828514821,
+    "best_fold": "fold_4",
+    "best_fold_mae_all": 43.866825839405294,
+    "best_fold_score": 40.14283116841836,
+    "fold_metrics": [
+      {
+        "fold_name": "fold_1",
+        "mae_all": 193.15891128250172,
+        "mae_peak": 95.40534282101522,
+        "pinball_p90": 41.41933310238245,
+        "score": 133.48492510803192
+      },
+      {
+        "fold_name": "fold_2",
+        "mae_all": 118.6015502005675,
+        "mae_peak": 226.0355579555922,
+        "pinball_p90": 17.86268219738279,
+        "score": 130.68397892643796
+      },
+      {
+        "fold_name": "fold_3",
+        "mae_all": 99.23375605664233,
+        "mae_peak": 132.1583281801099,
+        "pinball_p90": 15.044007276752522,
+        "score": 92.27317793770463
+      },
+      {
+        "fold_name": "fold_4",
+        "mae_all": 43.866825839405294,
+        "mae_peak": 55.29626473487098,
+        "pinball_p90": 8.102694141272103,
+        "score": 40.14283116841836
+      }
+    ]
+  },
+  {
+    "experiment": "gbr_peak2_shrink0.9",
+    "mean_mae_all": 111.68963144924014,
+    "mean_score": 96.14522371045715,
+    "best_fold": "fold_4",
+    "best_fold_mae_all": 44.74987635868168,
+    "best_fold_score": 36.13151204723343,
+    "fold_metrics": [
+      {
+        "fold_name": "fold_1",
+        "mae_all": 196.17509968127325,
+        "mae_peak": 98.35158235412652,
+        "pinball_p90": 39.42679045897302,
+        "score": 135.4783826386692
+      },
+      {
+        "fold_name": "fold_2",
+        "mae_all": 111.7344712946786,
+        "mae_peak": 213.38637095502028,
+        "pinball_p90": 17.726467441393556,
+        "score": 123.4284404221241
+      },
+      {
+        "fold_name": "fold_3",
+        "mae_all": 94.09907846232703,
+        "mae_peak": 131.84867609039932,
+        "pinball_p90": 14.692088377592924,
+        "score": 89.5425597338019
+      },
+      {
+        "fold_name": "fold_4",
+        "mae_all": 44.74987635868168,
+        "mae_peak": 40.62388404633541,
+        "pinball_p90": 7.8470432699598165,
+        "score": 36.13151204723343
+      }
+    ]
+  },
+  {
+    "experiment": "ridge_residual",
+    "mean_mae_all": 549.033815740402,
+    "mean_score": 471.3014590179929,
+    "best_fold": "fold_3",
+    "best_fold_mae_all": 409.56408713870917,
+    "best_fold_score": 260.2649500630542,
+    "fold_metrics": [
+      {
+        "fold_name": "fold_1",
+        "mae_all": 1097.4908907000054,
+        "mae_peak": 1519.8819258026883,
+        "pinball_p90": 43.85381549479948,
+        "score": 1013.4807861897691
+      },
+      {
+        "fold_name": "fold_2",
+        "mae_all": 349.7434898914481,
+        "mae_peak": 268.4508593781471,
+        "pinball_p90": 34.9743489891448,
+        "score": 262.40187255699715
+      },
+      {
+        "fold_name": "fold_3",
+        "mae_all": 409.56408713870917,
+        "mae_peak": 157.7135827499506,
+        "pinball_p90": 40.84415834357213,
+        "score": 260.2649500630542
+      },
+      {
+        "fold_name": "fold_4",
+        "mae_all": 339.3367952314456,
+        "mae_peak": 578.5611142056144,
+        "pinball_p90": 29.10747692371981,
+        "score": 349.0582272621511
+      }
+    ]
+  },
+  {
+    "experiment": "hist_gbr",
+    "status": "failed_runtime",
+    "error": "OpenMP SHM2 error in sandboxed environment"
+  }
+]
