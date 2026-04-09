@@ -23,9 +23,9 @@ except ImportError as exc:
     raise SystemExit("pip install catboost") from exc
 
 ROOT = Path(__file__).resolve().parents[1]
-REEFER_CSV = ROOT / "reefer_release" / "reefer_release.csv"
+REEFER_CSV = ROOT / "reefer_release.csv"
 TARGETS_CSV = ROOT / "target_timestamps.csv"
-WEATHER_DIR = ROOT / "wetterdaten"
+WEATHER_DIR = ROOT / "Wetterdaten Okt 25 - 23 Feb 26"
 OUTPUT_DIR = ROOT / "starter" / "output"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 PREDICTIONS_CSV = OUTPUT_DIR / "predictions.csv"
