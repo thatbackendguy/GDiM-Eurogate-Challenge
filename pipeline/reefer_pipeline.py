@@ -25,6 +25,9 @@ RANDOM_SEED = 42
 TARGET_FILE = "target_timestamps.csv"
 REEFER_FILE = "reefer_release.csv"
 WEATHER_DIR_NAME = "Wetterdaten Okt 25 - 23 Feb 26"
+TRAIN_START = pd.Timestamp("2025-01-01 00:00:00")
+TRAIN_END = pd.Timestamp("2025-12-31 23:00:00")
+WEATHER_FORECAST_HORIZON_HOURS = 24
 
 REEFER_USECOLS = [
     "container_visit_uuid",
@@ -441,10 +444,12 @@ def add_model_features(observations: pd.DataFrame) -> pd.DataFrame:
         feature_data[f"feat_{column}_lag168"] = df[column].shift(168)
 
     for column in weather_columns:
-        shifted = df[column].shift(24)
+        # Weather is treated as a 24-hour-ahead signal: for hour t we only use
+        # information that would have been known by hour t-24 or earlier.
+        shifted = df[column].shift(WEATHER_FORECAST_HORIZON_HOURS)
         feature_data[f"feat_{column}_lag24"] = shifted
-        feature_data[f"feat_{column}_lag48"] = df[column].shift(48)
-        feature_data[f"feat_{column}_lag168"] = df[column].shift(168)
+        feature_data[f"feat_{column}_lag48"] = df[column].shift(2 * WEATHER_FORECAST_HORIZON_HOURS)
+        feature_data[f"feat_{column}_lag168"] = df[column].shift(7 * WEATHER_FORECAST_HORIZON_HOURS)
         feature_data[f"feat_{column}_roll24_mean"] = shifted.rolling(24, min_periods=6).mean()
         feature_data[f"feat_{column}_roll24_max"] = shifted.rolling(24, min_periods=6).max()
         feature_data[f"feat_{column}_roll24_min"] = shifted.rolling(24, min_periods=6).min()
@@ -482,6 +487,11 @@ def get_model_rows(feature_table: pd.DataFrame) -> pd.DataFrame:
     rows = rows[rows["y_kw"].notna()]
     rows = rows[rows["baseline_pred_kw"].notna()]
     return rows.sort_index()
+
+
+def get_training_rows(feature_table: pd.DataFrame) -> pd.DataFrame:
+    rows = get_model_rows(feature_table)
+    return rows.loc[(rows.index >= TRAIN_START) & (rows.index <= TRAIN_END)].copy()
 
 
 def make_validation_folds(
@@ -689,7 +699,11 @@ def run_backtest(
     best_result: FoldResult | None = None
 
     for fold_name, fold_start, fold_end in folds:
-        train_frame = rows.loc[rows.index < fold_start].copy()
+        train_frame = rows.loc[
+            (rows.index < fold_start)
+            & (rows.index >= TRAIN_START)
+            & (rows.index <= TRAIN_END)
+        ].copy()
         valid_frame = rows.loc[(rows.index >= fold_start) & (rows.index <= fold_end)].copy()
 
         print(
@@ -761,7 +775,7 @@ def save_model_artifact(
 
 
 def fit_full_model(feature_table: pd.DataFrame) -> ResidualModelBundle:
-    rows = get_model_rows(feature_table)
+    rows = get_training_rows(feature_table)
     feature_columns = get_feature_columns(feature_table)
     return fit_residual_model(rows, feature_columns)
 

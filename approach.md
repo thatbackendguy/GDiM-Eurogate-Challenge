@@ -9,6 +9,8 @@ Key implementation choices:
 - Use a deterministic baseline of `0.7 * lag_24 + 0.3 * lag_168`.
 - Train a gradient boosting residual model to correct that baseline, with extra weight on the top 10% highest-load training hours.
 - Calibrate `pred_p90_kw` from positive validation residuals by hour-of-day and predicted-load bin, with fallbacks for sparse bins.
+- Restrict model fitting to labeled timestamps from `2025-01-01` through `2025-12-31`.
+- Treat weather as a 24-hour-ahead signal, using only weather values that would have been known at least 24 hours before the forecast hour.
 
 ## Data Notes
 The implementation follows the actual files in this package instead of the markdown descriptions when they differ:
@@ -54,10 +56,10 @@ The training script runs four rolling 7-day validation folds and scores:
 - combined score `0.5 * mae_all + 0.3 * mae_peak + 0.2 * pinball_p90`
 
 Observed mean backtest metrics from `outputs/backtest_metrics.json`:
-- `mae_all`: `117.63`
-- `mae_peak`: `128.71`
-- `pinball_p90`: `22.91`
-- combined score: `102.01`
+- `mae_all`: `112.95`
+- `mae_peak`: `121.48`
+- `pinball_p90`: `19.88`
+- combined score: `96.89`
 
 ## Reproducibility
 Rebuild the feature table:

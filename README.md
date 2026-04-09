@@ -13,14 +13,14 @@ The challenge emphasizes not only average accuracy, but also performance during 
 
 ## Results
 
-The final selected model run produced the following metrics:
+The final selected constrained model run produced the following metrics:
 
 | Metric | Value |
 | --- | ---: |
-| `mae_all` | `45.029` |
-| `mae_peak` | `57.887` |
-| `pinball_p90` | `8.356` |
-| `score` | `41.552` |
+| `mae_all` | `45.211` |
+| `mae_peak` | `34.340` |
+| `pinball_p90` | `7.782` |
+| `score` | `34.464` |
 
 Scoring formula used by the challenge:
 
@@ -39,6 +39,11 @@ The pipeline combines a strong deterministic baseline with a residual learning m
 3. Use a baseline forecast of `0.7 * lag_24 + 0.3 * lag_168`.
 4. Train a `GradientBoostingRegressor` to learn the residual on top of that baseline.
 5. Calibrate `pred_p90_kw` from positive validation residuals by hour-of-day and prediction bin.
+
+Applied modeling constraints:
+
+- Model fitting uses only labeled rows from `2025-01-01` to `2025-12-31`
+- Weather features are treated as a 24-hour-ahead problem, so only weather known at least 24 hours earlier is used
 
 This setup keeps the model simple, reproducible, and well aligned with the challenge objective of handling both normal and peak demand behavior.
 
