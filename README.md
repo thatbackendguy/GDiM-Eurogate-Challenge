@@ -52,6 +52,17 @@ The model uses a blend of operational, temporal, and environmental signals:
 - Lagged reefer fleet summaries, including container mix and temperature summaries
 - Lagged weather summaries, including temperature, wind, and wind-direction features
 
+## Preprocessing
+
+The model uses a simple leak-safe preprocessing pipeline fitted on the training data only:
+
+- Replace `inf` and `-inf` with missing values
+- Fill missing feature values with the training median
+- Clip extreme values at the 0.5th and 99.5th percentiles
+- Standardize non-binary numeric features
+
+Before preprocessing, the raw data is also cleaned and aggregated to hourly level, including timestamp flooring, missing-category handling, and sine/cosine encoding for wind direction.
+
 ## Validation Strategy
 
 Model quality is evaluated with rolling 7-day backtests using the competition metrics:
