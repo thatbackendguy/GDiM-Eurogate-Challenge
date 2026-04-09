@@ -1,10 +1,10 @@
 """
 Reefer load forecast — LightGBM + CatBoost ensemble on residuals.
 
-v6 changes vs v5 (ensemble-recursive):
-  1. Use ACTUAL reefer data within target period (24h-lagged, no recursion)
-  2. Residual modelling: baseline + ensemble_residual
-  3. Hour-of-day p90 calibration with fallbacks
+v7b: STRICTLY 2025-only reefer data, recursive forecasting for Jan 2026.
+  - Residual modelling (baseline = 0.7*lag_24 + 0.3*lag_168)
+  - Robust flat p90 calibration (a*q90+b) — joint optimisation
+  - Peak correction optimised on backtest
 """
 from __future__ import annotations
 
@@ -37,9 +37,12 @@ _REEFER_COLS = [
     "ContainerSize", "container_visit_uuid",
 ]
 _TOP_HW = ["ML3", "SCC6", "DecosVa", "DecosIIIj", "MP4000"]
+_CUTOFF = pd.Timestamp("2026-01-01", tz="UTC")
 
 
-# ── helpers ──────────────────────────────────────────────────────────────
+def _p(msg):
+    print(msg, flush=True)
+
 
 def _to_numeric(s: pd.Series) -> pd.Series:
     if s.dtype == object:
@@ -47,13 +50,9 @@ def _to_numeric(s: pd.Series) -> pd.Series:
     return pd.to_numeric(s, errors="coerce")
 
 
-# ── data loading (FULL dataset including target period) ──────────────────
+# ── data loading (2025 ONLY) ────────────────────────────────────────────
 
-def _p(msg):
-    print(msg, flush=True)
-
-
-def load_all_reefer() -> tuple[pd.Series, pd.DataFrame]:
+def load_reefer_2025() -> tuple[pd.Series, pd.DataFrame]:
     _p("  reading CSV...")
     df = pd.read_csv(REEFER_CSV, sep=";", usecols=_REEFER_COLS, low_memory=False)
     _p(f"  {len(df)} rows loaded, parsing dates...")
@@ -63,13 +62,15 @@ def load_all_reefer() -> tuple[pd.Series, pd.DataFrame]:
                  "TemperatureReturn", "RemperatureSupply"]:
         df[col] = _to_numeric(df[col])
     df = df.dropna(subset=["EventTime", "AvPowerCons"])
-    df["hour"] = df["EventTime"].dt.floor("h")
+    df = df[df["EventTime"] < _CUTOFF].copy()
+    _p(f"  {len(df)} rows after 2025 filter")
 
+    df["hour"] = df["EventTime"].dt.floor("h")
     _p("  computing hourly totals...")
     y = df.groupby("hour")["AvPowerCons"].sum() / 1000.0
     y = y.sort_index()
 
-    _p("  computing fleet features (vectorised)...")
+    _p("  computing fleet features...")
     fleet = df.groupby("hour").agg(
         n_containers=("container_visit_uuid", "nunique"),
         power_mean=("AvPowerCons", "mean"),
@@ -81,16 +82,12 @@ def load_all_reefer() -> tuple[pd.Series, pd.DataFrame]:
         supply_mean=("RemperatureSupply", "mean"),
     )
     fleet["temp_spread"] = fleet["return_mean"] - fleet["supply_mean"]
-
-    # Vectorised container-size share (no .apply)
     hour_counts = df.groupby("hour").size()
-    size40_counts = df[df["ContainerSize"] == 40].groupby("hour").size()
-    fleet["size_40_share"] = (size40_counts / hour_counts).reindex(fleet.index).fillna(0)
-
-    # Vectorised hardware-type shares (no .apply — MUCH faster)
+    size40 = df[df["ContainerSize"] == 40].groupby("hour").size()
+    fleet["size_40_share"] = (size40 / hour_counts).reindex(fleet.index).fillna(0)
     for hw in _TOP_HW:
-        hw_counts = df[df["HardwareType"] == hw].groupby("hour").size()
-        fleet[f"hw_{hw}"] = (hw_counts / hour_counts).reindex(fleet.index).fillna(0)
+        hw_c = df[df["HardwareType"] == hw].groupby("hour").size()
+        fleet[f"hw_{hw}"] = (hw_c / hour_counts).reindex(fleet.index).fillna(0)
 
     return y, fleet.sort_index()
 
@@ -132,19 +129,12 @@ def load_weather() -> pd.DataFrame:
     return weather.sort_index().pipe(lambda d: d[~d.index.duplicated(keep="last")])
 
 
-# ── feature engineering (all lag >= 24h, uses full series) ───────────────
+# ── feature engineering ──────────────────────────────────────────────────
 
-def build_feature_table(
-    y: pd.Series,
-    fleet: pd.DataFrame,
-    weather: pd.DataFrame,
-) -> pd.DataFrame:
-    """Build features for EVERY hour in y. All load/fleet features use
-    lags >= 24h so they reference only data known 24h before target."""
+def build_feature_table(y, fleet, weather):
     f = pd.DataFrame(index=y.index)
     f["y"] = y.values
 
-    # Deterministic baseline
     f["lag_24"]  = f["y"].shift(24)
     f["lag_48"]  = f["y"].shift(48)
     f["lag_72"]  = f["y"].shift(72)
@@ -152,12 +142,9 @@ def build_feature_table(
     f["baseline"] = 0.7 * f["lag_24"] + 0.3 * f["lag_168"]
     f["residual"] = f["y"] - f["baseline"]
 
-    # Also keep short lags (1-12) — they ARE valid because they reference
-    # actual data from the full series, not recursive predictions.
     for lag in [1, 2, 3, 6, 12]:
         f[f"lag_{lag}"] = f["y"].shift(lag)
 
-    # Rolling stats anchored at t-1 (valid: actual data available)
     shifted = f["y"].shift(1)
     for w in [3, 6, 12, 24, 48]:
         f[f"roll_mean_{w}"]  = shifted.rolling(w).mean()
@@ -165,14 +152,12 @@ def build_feature_table(
         f[f"roll_max_{w}"]   = shifted.rolling(w).max()
         f[f"roll_min_{w}"]   = shifted.rolling(w).min()
 
-    # Trend / delta
-    f["diff_24"]     = shifted - f["lag_24"]
-    f["diff_168"]    = shifted - f["lag_168"]
+    f["diff_24"]      = shifted - f["lag_24"]
+    f["diff_168"]     = shifted - f["lag_168"]
     f["ratio_24_168"] = f["lag_24"] / f["lag_168"].replace(0, np.nan)
     f["delta_24_48"]  = f["lag_24"] - f["lag_48"]
     f["delta_24_168"] = f["lag_24"] - f["lag_168"]
 
-    # Calendar (cyclical + raw)
     idx = f.index
     f["hour"]       = idx.hour
     f["dayofweek"]  = idx.dayofweek
@@ -184,7 +169,6 @@ def build_feature_table(
     f["dow_sin"]     = np.sin(2 * np.pi * idx.dayofweek / 7)
     f["dow_cos"]     = np.cos(2 * np.pi * idx.dayofweek / 7)
 
-    # Fleet composition lagged 1h and 24h
     if not fleet.empty:
         fl = fleet.reindex(f.index).ffill().bfill()
         for col in fl.columns:
@@ -193,7 +177,6 @@ def build_feature_table(
         if "n_containers" in fl.columns:
             f["fleet_n_diff24"] = fl["n_containers"].shift(1) - fl["n_containers"].shift(24)
 
-    # Weather lagged 24h + 48h
     if not weather.empty:
         wt = weather.reindex(f.index).ffill().bfill()
         for col in wt.columns:
@@ -201,7 +184,6 @@ def build_feature_table(
             f[f"{col}_lag48"]  = wt[col].shift(48)
             f[f"{col}_lag168"] = wt[col].shift(168)
             f[f"{col}_diff24"] = wt[col].shift(24) - wt[col].shift(48)
-
     return f
 
 
@@ -256,62 +238,25 @@ def _peak_weight(y, top_pct=0.10, boost=3.0):
     return w
 
 
-# ── hour-of-day p90 calibrator ──────────────────────────────────────────
+# ── joint parameter optimisation (flat p90 calibration — robust) ─────────
 
-class HourlyP90Calibrator:
-    def __init__(self, n_bins=4, min_samples=5):
-        self.n_bins = n_bins
-        self.min_samples = min_samples
-        self.table: dict[tuple[int, int], float] = {}
-        self.hour_fallback: dict[int, float] = {}
-        self.global_uplift = 0.0
-        self.edges = np.array([])
-
-    def fit(self, hours, y_true, y_pred):
-        hours, y_true, y_pred = map(np.asarray, (hours, y_true, y_pred))
-        resid = y_true - y_pred
-        pos_resid = np.maximum(resid, 0.0)
-        self.global_uplift = float(np.quantile(pos_resid, 0.9)) if len(pos_resid) else 0.0
-
-        self.edges = np.quantile(y_pred, np.linspace(0, 1, self.n_bins + 1))
-        bins = np.clip(np.digitize(y_pred, self.edges[1:-1]), 0, self.n_bins - 1)
-
-        for h in range(24):
-            m = hours == h
-            self.hour_fallback[h] = (
-                float(np.quantile(pos_resid[m], 0.9)) if m.sum() >= self.min_samples
-                else self.global_uplift
-            )
-        for h in range(24):
-            for b in range(self.n_bins):
-                m = (hours == h) & (bins == b)
-                self.table[(h, b)] = (
-                    float(np.quantile(pos_resid[m], 0.9)) if m.sum() >= self.min_samples
-                    else self.hour_fallback.get(h, self.global_uplift)
-                )
-
-    def uplift(self, hours, y_pred):
-        hours, y_pred = map(np.asarray, (hours, y_pred))
-        bins = np.clip(np.digitize(y_pred, self.edges[1:-1]), 0, self.n_bins - 1) if len(self.edges) > 2 else np.zeros_like(y_pred, dtype=int)
-        return np.array([self.table.get((int(h), int(b)), self.global_uplift) for h, b in zip(hours, bins)])
-
-
-# ── parameter optimisation (blend weight + peak add) ─────────────────────
-
-def _optimize_blend(eval_df, cal: HourlyP90Calibrator):
+def _optimize_params(eval_df):
+    """Search over w, peak_add, cal_a, cal_b to minimise combined score."""
     y_true = eval_df["y_true"].values
-    hours = eval_df.index.hour
+    lgbm_r = eval_df["lgbm_resid"].values
+    cb_r   = eval_df["cb_resid"].values
+    lgbm_q = eval_df["lgbm_q90_resid"].values
+    cb_q   = eval_df["cb_q90_resid"].values
+    bl     = eval_df["baseline"].values
 
-    best = {"w": 0.5, "peak_add": 0}
+    best = {"w": 0.5, "peak_add": 0, "cal_a": 1.0, "cal_b": 0.0}
     best_score = float("inf")
 
-    for w in np.arange(0.25, 0.75, 0.05):
-        resid_pt = w * eval_df["lgbm_resid"].values + (1 - w) * eval_df["cb_resid"].values
-        resid_q  = w * eval_df["lgbm_q90_resid"].values + (1 - w) * eval_df["cb_q90_resid"].values
-        point = eval_df["baseline"].values + resid_pt
-        point = np.clip(point, 0, None)
-        q90_raw = eval_df["baseline"].values + resid_q
-        q90_raw = np.maximum(q90_raw, point)
+    for w in np.arange(0.30, 0.75, 0.05):
+        point_resid = w * lgbm_r + (1 - w) * cb_r
+        q90_resid   = w * lgbm_q + (1 - w) * cb_q
+        point = np.clip(bl + point_resid, 0, None)
+        q90_raw = np.maximum(bl + q90_resid, point)
 
         peak_thr = float(np.quantile(point, 0.80))
         peak_mask = point >= peak_thr
@@ -319,40 +264,85 @@ def _optimize_blend(eval_df, cal: HourlyP90Calibrator):
         for pa in [0, 5, 10, 15, 20, 30, 40, 50]:
             corrected = point.copy()
             corrected[peak_mask] += pa
-            p90 = np.maximum(corrected, corrected + cal.uplift(hours, corrected))
-            s = challenge_score(y_true, corrected, p90)["score_proxy"]
-            if s < best_score:
-                best_score = s
-                best = {"w": float(w), "peak_add": pa}
+            for ca in [0.90, 0.95, 1.00, 1.05, 1.10, 1.15, 1.20]:
+                for cb in [0, 5, 10, 20, 30, 45, 60, 80, 100]:
+                    p90 = np.maximum(corrected, ca * q90_raw + cb)
+                    s = challenge_score(y_true, corrected, p90)["score_proxy"]
+                    if s < best_score:
+                        best_score = s
+                        best = {"w": float(w), "peak_add": pa,
+                                "cal_a": ca, "cal_b": cb}
     return best
 
 
-# ── backtest (14-day, direct — no recursion) ─────────────────────────────
+# ── recursive forecasting ───────────────────────────────────────────────
 
-def run_backtest(feat: pd.DataFrame, feature_cols: list[str], days=14):
-    """For each fold the validation day's features come from actual data
-    (via the pre-built feature table), not from recursive predictions."""
+def _forecast_recursive(
+    models_pt, models_q90, w,
+    known_y, target_index, fleet, weather, feature_cols,
+):
+    WINDOW = 200
+    y_work = known_y.copy()
+    pts, q90s = {}, {}
+
+    for i, ts in enumerate(target_index):
+        if i % 24 == 0:
+            _p(f"  recursive hour {i+1}/{len(target_index)}")
+
+        y_work.loc[ts] = np.nan
+        start = ts - pd.Timedelta(hours=WINDOW)
+        y_win = y_work.loc[start:]
+
+        feat = build_feature_table(y_win, fleet, weather)
+        row = feat.loc[[ts], feature_cols].fillna(0)
+        bl = feat.at[ts, "baseline"]
+        if pd.isna(bl):
+            bl = y_work.get(ts - pd.Timedelta(hours=24), y_work.iloc[-2])
+
+        r_pt = float(w * models_pt[0].predict(row)[0]
+                      + (1 - w) * models_pt[1].predict(row)[0])
+        point = max(0.0, float(bl) + r_pt)
+
+        r_q = float(w * models_q90[0].predict(row)[0]
+                     + (1 - w) * models_q90[1].predict(row)[0])
+        q90 = max(point, float(bl) + r_q)
+
+        pts[ts] = point
+        q90s[ts] = q90
+        y_work.loc[ts] = point
+
+    return pd.Series(pts).sort_index(), pd.Series(q90s).sort_index()
+
+
+# ── backtest ─────────────────────────────────────────────────────────────
+
+def run_backtest(feat_2025, feature_cols, days=14):
+    """Direct (non-recursive) backtest for fast parameter optimisation.
+    This is the training-time evaluation; production uses recursion."""
     folds = []
-    # Only use 2025 data for backtest
-    feat_2025 = feat.loc[feat.index < "2026-01-01"]
     end = feat_2025.index.max()
 
     for i in range(days, 0, -1):
         split = end - pd.Timedelta(days=i)
-        train_df = feat_2025.loc[:split - pd.Timedelta(hours=1)].dropna(subset=["baseline", "residual"] + feature_cols)
-        val_idx = pd.date_range(split, periods=24, freq="h", tz="UTC").intersection(feat_2025.index)
-        val_df = feat_2025.loc[val_idx].dropna(subset=["baseline", "residual"] + feature_cols)
+        train_df = feat_2025.loc[:split - pd.Timedelta(hours=1)].dropna(
+            subset=["baseline", "residual"] + feature_cols
+        )
+        val_idx = pd.date_range(split, periods=24, freq="h", tz="UTC")
+        val_idx = val_idx.intersection(feat_2025.index)
+        val_df = feat_2025.loc[val_idx].dropna(
+            subset=["baseline", "residual"] + feature_cols
+        )
         if len(val_df) < 24:
             continue
 
         _p(f"  fold {days - i + 1}/{days}  split={split.date()}")
 
         X_tr, y_tr = train_df[feature_cols], train_df["residual"]
-        X_va = val_df[feature_cols]
         sw = _peak_weight(train_df["y"].values, top_pct=0.10, boost=3.0)
+        X_va = val_df[feature_cols]
 
-        m1 = _lgbm_pt(); m1.fit(X_tr, y_tr, sample_weight=sw)
-        m2 = _cb_pt();   m2.fit(X_tr, y_tr, sample_weight=sw)
+        m1 = _lgbm_pt();  m1.fit(X_tr, y_tr, sample_weight=sw)
+        m2 = _cb_pt();    m2.fit(X_tr, y_tr, sample_weight=sw)
         m3 = _lgbm_q90(); m3.fit(X_tr, y_tr)
         m4 = _cb_q90();   m4.fit(X_tr, y_tr)
 
@@ -368,92 +358,92 @@ def run_backtest(feat: pd.DataFrame, feature_cols: list[str], days=14):
     _p("  all folds done")
     eval_df = pd.concat(folds).sort_index()
 
-    # Fit p90 calibrator with initial blend
-    w_init = 0.5
-    pt_init = eval_df["baseline"].values + w_init * eval_df["lgbm_resid"].values + (1 - w_init) * eval_df["cb_resid"].values
-    pt_init = np.clip(pt_init, 0, None)
-    cal = HourlyP90Calibrator(n_bins=4, min_samples=5)
-    cal.fit(eval_df.index.hour, eval_df["y_true"].values, pt_init)
+    params = _optimize_params(eval_df)
 
-    # Optimise blend + peak_add using the calibrator
-    params = _optimize_blend(eval_df, cal)
-
-    # Refit calibrator with optimised blend
+    # Report direct backtest score with optimised params
     w = params["w"]
-    pt_opt = eval_df["baseline"].values + w * eval_df["lgbm_resid"].values + (1 - w) * eval_df["cb_resid"].values
-    pt_opt = np.clip(pt_opt, 0, None)
-    peak_thr = float(np.quantile(pt_opt, 0.80))
-    pt_opt[pt_opt >= peak_thr] += params["peak_add"]
-    cal.fit(eval_df.index.hour, eval_df["y_true"].values, pt_opt)
+    point = np.clip(
+        eval_df["baseline"].values
+        + w * eval_df["lgbm_resid"].values
+        + (1 - w) * eval_df["cb_resid"].values,
+        0, None,
+    )
+    q90_raw = np.maximum(
+        eval_df["baseline"].values
+        + w * eval_df["lgbm_q90_resid"].values
+        + (1 - w) * eval_df["cb_q90_resid"].values,
+        point,
+    )
+    peak_thr = float(np.quantile(point, 0.80))
+    corrected = point.copy()
+    corrected[point >= peak_thr] += params["peak_add"]
+    p90 = np.maximum(corrected, params["cal_a"] * q90_raw + params["cal_b"])
+    metrics = challenge_score(eval_df["y_true"].values, corrected, p90)
 
-    p90 = np.maximum(pt_opt, pt_opt + cal.uplift(eval_df.index.hour, pt_opt))
-    metrics = challenge_score(eval_df["y_true"].values, pt_opt, p90)
-    return metrics, params, cal
+    return metrics, params
 
 
 # ── main ─────────────────────────────────────────────────────────────────
 
 def main():
-    _p("Loading ALL reefer data (including target period)...")
-    y, fleet = load_all_reefer()
+    _p("Loading reefer data (2025 ONLY)...")
+    y, fleet = load_reefer_2025()
     _p(f"  {len(y)} hourly observations")
 
-    _p("Loading weather...")
+    _p("Loading weather (all available)...")
     weather = load_weather()
 
-    _p("Building full feature table (actual data, no recursion)...")
+    _p("Building 2025 feature table...")
     feat = build_feature_table(y, fleet, weather)
     exclude = {"y", "baseline", "residual"}
     feature_cols = [c for c in feat.columns if c not in exclude]
     _p(f"  {len(feature_cols)} features")
 
-    _p("Running 14-day backtest (direct, no recursion)...")
-    bt, params, cal = run_backtest(feat, feature_cols, days=14)
-    _p("Backtest metrics:")
+    _p("Running 14-day backtest (direct, for param optimisation)...")
+    bt, params = run_backtest(feat, feature_cols, days=14)
+    _p("Backtest metrics (direct):")
     for k, v in bt.items():
         _p(f"  {k}: {v:.4f}")
     _p(f"Params: {params}")
 
-    # Final training on all 2025 data
+    # Final training on ALL 2025 data
     _p("Training final ensemble on all 2025 data...")
-    train_mask = (feat.index >= "2025-01-01") & (feat.index < "2026-01-01")
-    train_df = feat.loc[train_mask].dropna(subset=["baseline", "residual"] + feature_cols)
+    train_df = feat.dropna(subset=["baseline", "residual"] + feature_cols)
     X_tr, y_resid = train_df[feature_cols], train_df["residual"]
     sw = _peak_weight(train_df["y"].values, top_pct=0.10, boost=3.0)
+    _p(f"  training rows: {len(train_df)}")
 
-    m_lgbm = _lgbm_pt(); m_lgbm.fit(X_tr, y_resid, sample_weight=sw)
-    m_cb   = _cb_pt();   m_cb.fit(X_tr, y_resid, sample_weight=sw)
+    m_lgbm   = _lgbm_pt();  m_lgbm.fit(X_tr, y_resid, sample_weight=sw)
+    m_cb     = _cb_pt();    m_cb.fit(X_tr, y_resid, sample_weight=sw)
     m_lgbm_q = _lgbm_q90(); m_lgbm_q.fit(X_tr, y_resid)
     m_cb_q   = _cb_q90();   m_cb_q.fit(X_tr, y_resid)
 
-    # Predict target timestamps (features already built from actual data!)
+    # Recursive forecast for target period
     targets = pd.read_csv(TARGETS_CSV)
     target_idx = pd.DatetimeIndex(
         pd.to_datetime(targets["timestamp_utc"], utc=True).dropna()
     ).sort_values()
+    _p(f"Forecasting {len(target_idx)} target hours (recursive)...")
 
-    target_feat = feat.loc[target_idx].copy()
-    missing = target_feat["baseline"].isna().sum()
-    if missing > 0:
-        _p(f"  WARNING: {missing} targets missing baseline, filling with lag_24")
-        target_feat["baseline"] = target_feat["baseline"].fillna(target_feat["lag_24"])
-
-    X_tgt = target_feat[feature_cols].fillna(0)
     w = params["w"]
-    resid_pt = w * m_lgbm.predict(X_tgt) + (1 - w) * m_cb.predict(X_tgt)
-    point = target_feat["baseline"].values + resid_pt
-    point = np.clip(point, 0, None)
+    pred_pt, pred_q90_raw = _forecast_recursive(
+        [m_lgbm, m_cb], [m_lgbm_q, m_cb_q], w,
+        y, target_idx, fleet, weather, feature_cols,
+    )
+
+    point = pred_pt.values.copy()
+    q90_raw = np.maximum(pred_q90_raw.values, point)
 
     # Peak correction
     peak_thr = float(np.quantile(point, 0.80))
-    point[point >= peak_thr] += params["peak_add"]
+    point[pred_pt.values >= peak_thr] += params["peak_add"]
 
-    # P90 from hourly calibrator
-    p90 = np.maximum(point, point + cal.uplift(target_idx.hour, point))
+    # Flat p90 calibration
+    p90 = np.maximum(point, params["cal_a"] * q90_raw + params["cal_b"])
 
     out = pd.DataFrame({
         "timestamp_utc": [ts.strftime("%Y-%m-%dT%H:%M:%SZ") for ts in target_idx],
-        "pred_power_kw": np.round(point, 6),
+        "pred_power_kw": np.round(np.clip(point, 0, None), 6),
         "pred_p90_kw": np.round(np.maximum(p90, point), 6),
     })
     out.to_csv(PREDICTIONS_CSV, index=False)
