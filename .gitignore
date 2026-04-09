@@ -1,0 +1,20 @@
+# Ignore large dataset files
+reefer_release.csv
+reefer_release.zip
+wetterdaten.zip
+Wetterdaten Okt 25 - 23 Feb 26/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Outputs
+outputs/
+predictions*.csv
+
+# Mac specific
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
