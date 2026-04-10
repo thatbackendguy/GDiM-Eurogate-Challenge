@@ -1,0 +1,20 @@
+{
+  "residual": {
+    "strategy": "median_clip_scale",
+    "feature_count": 263,
+    "scaled_feature_count": 251,
+    "imputed_feature_count": 263
+  },
+  "direct": {
+    "strategy": "median_clip_scale",
+    "feature_count": 273,
+    "scaled_feature_count": 260,
+    "imputed_feature_count": 273
+  },
+  "gate": {
+    "strategy": "median_clip_scale",
+    "feature_count": 274,
+    "scaled_feature_count": 261,
+    "imputed_feature_count": 274
+  }
+}
