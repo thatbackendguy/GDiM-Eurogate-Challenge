@@ -6,15 +6,15 @@ The repo now keeps one clean final approach and one safer backup.
 - Primary submission:
   - `peakprob_gate` with `--residual-training-policy nov_dec_only`
   - public score: `29.813058`
-  - file: [predictions.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/predictions.csv)
+  - file: [predictions.csv](./predictions.csv)
 - Safer backup:
   - `peakprob_gate` with `--residual-training-policy jan_nov_dec`
   - public score: `31.693414`
-  - file: [outputs/predictions_peakprob_gate_jan_nov_dec.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_jan_nov_dec.csv)
+  - file: [outputs/predictions_peakprob_gate_jan_nov_dec.csv](./outputs/predictions_peakprob_gate_jan_nov_dec.csv)
 - Incremental milestone kept for reference:
   - `peakprob_gate` with `--residual-training-policy full_year`
   - public score: `34.180486`
-  - file: [outputs/predictions_peakprob_gate_full_year.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_full_year.csv)
+  - file: [outputs/predictions_peakprob_gate_full_year.csv](./outputs/predictions_peakprob_gate_full_year.csv)
 
 The main idea is simple:
 - keep the shared leak-safe feature pipeline
@@ -23,7 +23,7 @@ The main idea is simple:
 - only specialize the `residual` branch to late-year winter-like data
 
 ## Challenge Setup
-The task is to predict terminal-wide hourly reefer power for the timestamps in [target_timestamps.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/target_timestamps.csv).
+The task is to predict terminal-wide hourly reefer power for the timestamps in [target_timestamps.csv](./target_timestamps.csv).
 
 The public target window is:
 - `2026-01-01 00:00 UTC` through `2026-01-10 06:00 UTC`
@@ -38,9 +38,9 @@ The challenge score is:
 ## Data Used
 Only the supplied challenge files are used:
 
-- [reefer_release.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/reefer_release.csv)
-- [Wetterdaten Okt 25 - 23 Feb 26](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/Wetterdaten%20Okt%2025%20-%2023%20Feb%2026)
-- [target_timestamps.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/target_timestamps.csv)
+- [reefer_release.csv](./reefer_release.csv)
+- [Wetterdaten Okt 25 - 23 Feb 26](./Wetterdaten%20Okt%2025%20-%2023%20Feb%2026/)
+- [target_timestamps.csv](./target_timestamps.csv)
 
 The hourly target is built as:
 - `y_kw = sum(AvPowerCons) / 1000`
@@ -60,10 +60,10 @@ Leak-prevention rules used in code:
 - the residual training-policy filter only selects subsets of 2025 rows, never 2026 rows
 
 The automated checker is:
-- [check_leak_safety.py](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/check_leak_safety.py)
+- [check_leak_safety.py](./check_leak_safety.py)
 
 ## Shared Feature Pipeline
-All model modes share the same base feature table from [pipeline/reefer_pipeline.py](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/pipeline/reefer_pipeline.py).
+All model modes share the same base feature table from [pipeline/reefer_pipeline.py](./pipeline/reefer_pipeline.py).
 
 Main feature groups:
 - load lags:
@@ -115,7 +115,7 @@ This is only fed into the `residual` branch.
 It is `1` only on a very small set of known post-holiday fleet-release dates and `0` everywhere else. It is not a broad holiday flag. It exists only to nudge the normal-hours model during the handful of periods where fleet unwinding repeatedly distorted the lag-based baseline.
 
 ## Model Architecture
-The repo supports three forecast modes via [train_and_predict.py](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/train_and_predict.py).
+The repo supports three forecast modes via [train_and_predict.py](./train_and_predict.py).
 
 ### `residual`
 - deterministic baseline:
@@ -176,8 +176,8 @@ Why this helps:
 
 ## Benchmark Summary
 The full benchmark is kept in:
-- [outputs/residual_training_policy_benchmark.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.csv)
-- [outputs/residual_training_policy_benchmark.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.json)
+- [outputs/residual_training_policy_benchmark.csv](./outputs/residual_training_policy_benchmark.csv)
+- [outputs/residual_training_policy_benchmark.json](./outputs/residual_training_policy_benchmark.json)
 
 Key `peakprob_gate` results:
 
@@ -207,19 +207,19 @@ Backup:
 The repo now keeps only the final and incrementally useful outputs.
 
 Primary current run:
-- [predictions.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/predictions.csv)
-- [outputs/predictions_peakprob_gate.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate.csv)
-- [outputs/backtest_metrics_peakprob_gate.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/backtest_metrics_peakprob_gate.json)
-- [outputs/model_ready_feature_table_peakprob_gate.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/model_ready_feature_table_peakprob_gate.csv)
-- [outputs/preprocessing_summary_peakprob_gate.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/preprocessing_summary_peakprob_gate.json)
-- [outputs/best_model_peakprob_gate.pkl](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/best_model_peakprob_gate.pkl)
+- [predictions.csv](./predictions.csv)
+- [outputs/predictions_peakprob_gate.csv](./outputs/predictions_peakprob_gate.csv)
+- [outputs/backtest_metrics_peakprob_gate.json](./outputs/backtest_metrics_peakprob_gate.json)
+- [outputs/model_ready_feature_table_peakprob_gate.csv](./outputs/model_ready_feature_table_peakprob_gate.csv)
+- [outputs/preprocessing_summary_peakprob_gate.json](./outputs/preprocessing_summary_peakprob_gate.json)
+- [outputs/best_model_peakprob_gate.pkl](./outputs/best_model_peakprob_gate.pkl)
 
 Incremental worked outputs:
-- [outputs/predictions_peakprob_gate_full_year.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_full_year.csv)
-- [outputs/predictions_peakprob_gate_jan_nov_dec.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_jan_nov_dec.csv)
-- [outputs/predictions_peakprob_gate_nov_dec_only.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_nov_dec_only.csv)
-- [outputs/residual_training_policy_benchmark.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.csv)
-- [outputs/residual_training_policy_benchmark.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.json)
+- [outputs/predictions_peakprob_gate_full_year.csv](./outputs/predictions_peakprob_gate_full_year.csv)
+- [outputs/predictions_peakprob_gate_jan_nov_dec.csv](./outputs/predictions_peakprob_gate_jan_nov_dec.csv)
+- [outputs/predictions_peakprob_gate_nov_dec_only.csv](./outputs/predictions_peakprob_gate_nov_dec_only.csv)
+- [outputs/residual_training_policy_benchmark.csv](./outputs/residual_training_policy_benchmark.csv)
+- [outputs/residual_training_policy_benchmark.json](./outputs/residual_training_policy_benchmark.json)
 
 ## Reproducibility
 Rebuild features:

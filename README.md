@@ -7,7 +7,7 @@ The current primary submission is:
 
 - `peakprob_gate`
 - `--residual-training-policy nov_dec_only`
-- file: [predictions.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/predictions.csv)
+- file: [predictions.csv](./predictions.csv)
 
 Public-window score:
 
@@ -22,14 +22,14 @@ Safer backup:
 
 - `peakprob_gate`
 - `--residual-training-policy jan_nov_dec`
-- file: [outputs/predictions_peakprob_gate_jan_nov_dec.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_jan_nov_dec.csv)
+- file: [outputs/predictions_peakprob_gate_jan_nov_dec.csv](./outputs/predictions_peakprob_gate_jan_nov_dec.csv)
 - public score: `31.693414`
 
 Incremental milestone kept for reference:
 
 - `peakprob_gate`
 - `--residual-training-policy full_year`
-- file: [outputs/predictions_peakprob_gate_full_year.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_full_year.csv)
+- file: [outputs/predictions_peakprob_gate_full_year.csv](./outputs/predictions_peakprob_gate_full_year.csv)
 - public score: `34.180486`
 
 Scoring formula:
@@ -40,8 +40,36 @@ score = 0.5 * mae_all + 0.3 * mae_peak + 0.2 * pinball_p90
 
 Lower is better.
 
+## Score Journey
+The solution improved in a few clear positive phases. This table only shows milestones that actually moved the score in the right direction.
+
+| Phase | Main Change | Public Score | Improvement |
+| --- | --- | ---: | ---: |
+| 1 | Broader thermal-burden features plus a small quantile shift on the point model | `37.954254` | baseline strengthening |
+| 2 | Move from fixed blending to the learned `peakprob_gate` architecture | `34.916991` | `-3.037263` |
+| 3 | Add the sparse residual-only post-holiday release flag | `34.180486` | `-0.736505` |
+| 4 | Keep the same architecture, but train the residual branch on `jan_nov_dec` only | `31.693414` | `-2.487072` |
+| 5 | Keep the same architecture, but train the residual branch on `nov_dec_only` only | `29.813058` | `-1.880356` |
+
+The journey in plain English:
+- first we improved the feature representation with thermal-burden signals
+- then we improved the architecture with a learned gate between residual and direct models
+- then we added one very targeted post-holiday release signal
+- finally, the biggest last jump came from changing what the residual branch learns from, while keeping the direct branch and gate on full 2025
+
+## Phase Summary
+This is the positive-only phase-by-phase story of what stuck.
+
+| Phase | What Worked | Why It Helped |
+| --- | --- | --- |
+| Feature phase | Thermal-burden features | Added physically meaningful reefer cooling-load structure |
+| Architecture phase | `peakprob_gate` | Let the model route between normal-hour and peak-hour specialists |
+| Regime-correction phase | Sparse post-holiday release flag | Nudged the residual branch during specific fleet-unwind periods |
+| Seasonal-specialization phase | `jan_nov_dec` residual training | Reduced mismatch between summer 2025 and January 2026 conditions |
+| Final specialization phase | `nov_dec_only` residual training | Let the residual branch focus almost entirely on the most relevant recent winter regime |
+
 ## What The Solution Predicts
-The challenge requires hourly forecasts for the timestamps in [target_timestamps.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/target_timestamps.csv).
+The challenge requires hourly forecasts for the timestamps in [target_timestamps.csv](./target_timestamps.csv).
 
 The model predicts:
 - `pred_power_kw`
@@ -66,9 +94,9 @@ That lets the normal-hours model specialize for early January conditions, while 
 ## Data Used
 Only the supplied challenge files are used:
 
-- [reefer_release.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/reefer_release.csv)
-- [Wetterdaten Okt 25 - 23 Feb 26](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/Wetterdaten%20Okt%2025%20-%2023%20Feb%2026)
-- [target_timestamps.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/target_timestamps.csv)
+- [reefer_release.csv](./reefer_release.csv)
+- [Wetterdaten Okt 25 - 23 Feb 26](./Wetterdaten%20Okt%2025%20-%2023%20Feb%2026/)
+- [target_timestamps.csv](./target_timestamps.csv)
 
 The hourly target is aggregated as:
 - `y_kw = sum(AvPowerCons) / 1000`
@@ -85,7 +113,7 @@ The pipeline is designed to stay compliant with the challenge constraints:
 - residual training-policy filters only choose subsets of 2025 rows
 
 Leak checks are implemented in:
-- [check_leak_safety.py](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/check_leak_safety.py)
+- [check_leak_safety.py](./check_leak_safety.py)
 
 ## Feature Highlights
 The strongest feature groups are:
@@ -120,7 +148,7 @@ There is also one sparse calendar feature kept only for the residual branch:
 This is not a generic holiday flag. It is only active on a very small set of known post-holiday fleet-release dates.
 
 ## Model Modes
-The training entry point is [train_and_predict.py](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/train_and_predict.py).
+The training entry point is [train_and_predict.py](./train_and_predict.py).
 
 Supported modes:
 - `residual`
@@ -171,8 +199,8 @@ Benchmark summary:
 | `full_year` | `34.180486` | `51.129222` | `23.177656` | `95.850613` |
 
 The full benchmark files are:
-- [outputs/residual_training_policy_benchmark.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.csv)
-- [outputs/residual_training_policy_benchmark.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.json)
+- [outputs/residual_training_policy_benchmark.csv](./outputs/residual_training_policy_benchmark.csv)
+- [outputs/residual_training_policy_benchmark.json](./outputs/residual_training_policy_benchmark.json)
 
 ## Repository Layout
 
@@ -240,8 +268,8 @@ Score kept submissions on the public window:
 ```
 
 ## Additional Notes
-- [approach.md](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/approach.md) contains the full technical walkthrough.
-- [worked_summary.md](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/worked_summary.md) records the ideas that actually improved the solution.
+- [approach.md](./approach.md) contains the full technical walkthrough.
+- [worked_summary.md](./worked_summary.md) records the ideas that actually improved the solution.
 - The repo intentionally keeps only the final and incrementally useful outputs, not the failed branches.
 
 ## License

@@ -116,8 +116,8 @@ Why that makes sense:
 
 ### Benchmark results
 The benchmark results are stored in:
-- [outputs/residual_training_policy_benchmark.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.csv)
-- [outputs/residual_training_policy_benchmark.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.json)
+- [outputs/residual_training_policy_benchmark.csv](./outputs/residual_training_policy_benchmark.csv)
+- [outputs/residual_training_policy_benchmark.json](./outputs/residual_training_policy_benchmark.json)
 
 Useful comparison:
 
@@ -145,7 +145,7 @@ Why:
 - still acceptable fold behavior
 
 Primary submission file:
-- [predictions.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/predictions.csv)
+- [predictions.csv](./predictions.csv)
 
 ### Backup
 Use:
@@ -158,27 +158,27 @@ Why:
 - best “safer” seasonal alternative
 
 Backup submission file:
-- [outputs/predictions_peakprob_gate_jan_nov_dec.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_jan_nov_dec.csv)
+- [outputs/predictions_peakprob_gate_jan_nov_dec.csv](./outputs/predictions_peakprob_gate_jan_nov_dec.csv)
 
 ## Kept Incremental Outputs
 The repo keeps the outputs that represent the winning path, not the failed branches.
 
 Kept prediction outputs:
-- [predictions.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/predictions.csv)
-- [outputs/predictions_peakprob_gate.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate.csv)
-- [outputs/predictions_peakprob_gate_full_year.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_full_year.csv)
-- [outputs/predictions_peakprob_gate_jan_nov_dec.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_jan_nov_dec.csv)
-- [outputs/predictions_peakprob_gate_nov_dec_only.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/predictions_peakprob_gate_nov_dec_only.csv)
+- [predictions.csv](./predictions.csv)
+- [outputs/predictions_peakprob_gate.csv](./outputs/predictions_peakprob_gate.csv)
+- [outputs/predictions_peakprob_gate_full_year.csv](./outputs/predictions_peakprob_gate_full_year.csv)
+- [outputs/predictions_peakprob_gate_jan_nov_dec.csv](./outputs/predictions_peakprob_gate_jan_nov_dec.csv)
+- [outputs/predictions_peakprob_gate_nov_dec_only.csv](./outputs/predictions_peakprob_gate_nov_dec_only.csv)
 
 Kept benchmark outputs:
-- [outputs/residual_training_policy_benchmark.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.csv)
-- [outputs/residual_training_policy_benchmark.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/residual_training_policy_benchmark.json)
+- [outputs/residual_training_policy_benchmark.csv](./outputs/residual_training_policy_benchmark.csv)
+- [outputs/residual_training_policy_benchmark.json](./outputs/residual_training_policy_benchmark.json)
 
 Kept primary run artifacts:
-- [outputs/backtest_metrics_peakprob_gate.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/backtest_metrics_peakprob_gate.json)
-- [outputs/model_ready_feature_table_peakprob_gate.csv](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/model_ready_feature_table_peakprob_gate.csv)
-- [outputs/preprocessing_summary_peakprob_gate.json](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/preprocessing_summary_peakprob_gate.json)
-- [outputs/best_model_peakprob_gate.pkl](/Users/ashutoshchatterjee/Documents/Projects/GDiM-Eurogate-Challenge-Yash/outputs/best_model_peakprob_gate.pkl)
+- [outputs/backtest_metrics_peakprob_gate.json](./outputs/backtest_metrics_peakprob_gate.json)
+- [outputs/model_ready_feature_table_peakprob_gate.csv](./outputs/model_ready_feature_table_peakprob_gate.csv)
+- [outputs/preprocessing_summary_peakprob_gate.json](./outputs/preprocessing_summary_peakprob_gate.json)
+- [outputs/best_model_peakprob_gate.pkl](./outputs/best_model_peakprob_gate.pkl)
 
 ## Bottom Line
 The final breakthrough did not come from a new model class or from using future information.
