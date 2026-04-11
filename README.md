@@ -2,6 +2,11 @@
 
 Forecasting hourly terminal reefer electricity demand with a leak-safe pipeline, a calibrated `p90` forecast, and a gated blend of two complementary point models.
 
+Final Submission Presentation : 
+- file: [Check the presentation](https://drive.google.com/file/d/199y_PiXTG6z9dIGH8XIDU47NxTUg3eCL/view?usp=sharing)
+
+<img width="1055" height="560" alt="image" src="https://github.com/user-attachments/assets/5b7e34c8-3f13-4607-a08c-85edb4576751" />
+
 ## Current Best Result
 The current primary submission is:
 
